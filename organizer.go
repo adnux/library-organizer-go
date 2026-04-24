@@ -7,7 +7,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
+
+const workerCount = 5
 
 var (
 	musicExts = map[string]bool{
@@ -95,10 +98,10 @@ func organize(root string, execute bool, structure []string) error {
 	return executePlan(moves, root)
 }
 
-// buildPlan walks root and returns all planned moves.
-func buildPlan(root string, structure []string) ([]move, error) {
-	var moves []move
-
+// collectMusicFiles walks root and returns all music file paths, without
+// reading any metadata. This is the fast first phase of the two-phase plan.
+func collectMusicFiles(root string) ([]string, error) {
+	var files []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -106,30 +109,82 @@ func buildPlan(root string, structure []string) ([]move, error) {
 		if d.IsDir() {
 			return nil
 		}
-
-		ext := strings.ToLower(filepath.Ext(path))
-		if !musicExts[ext] {
-			return nil
-		}
-
-		meta := resolveMetadata(path)
-
-		// Build destination path dynamically from structure tokens
-		parts := make([]string, 0, len(structure)+2)
-		parts = append(parts, root)
-		for _, token := range structure {
-			parts = append(parts, metaField(meta, token))
-		}
-		parts = append(parts, filepath.Base(path))
-		dst := filepath.Join(parts...)
-
-		if path != dst {
-			moves = append(moves, move{src: path, dst: dst})
+		if musicExts[strings.ToLower(filepath.Ext(path))] {
+			files = append(files, path)
 		}
 		return nil
 	})
+	return files, err
+}
 
-	return moves, err
+// buildPlan collects all music files, then resolves metadata for each one
+// using workerCount goroutines in parallel (the slow ffprobe calls).
+func buildPlan(root string, structure []string) ([]move, error) {
+	// Phase 1 — fast filesystem walk, no ffprobe yet.
+	files, err := collectMusicFiles(root)
+	if err != nil {
+		return nil, fmt.Errorf("collecting files: %w", err)
+	}
+	fmt.Printf("  Found %d music files. Resolving metadata with %d workers...\n\n",
+		len(files), workerCount)
+
+	// Phase 2 — parallel metadata resolution.
+	type result struct {
+		mv move
+		ok bool
+	}
+
+	jobs    := make(chan string, len(files))
+	results := make(chan result, len(files))
+
+	var wg sync.WaitGroup
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for path := range jobs {
+				meta := resolveMetadata(path)
+
+				parts := make([]string, 0, len(structure)+2)
+				parts = append(parts, root)
+				for _, token := range structure {
+					parts = append(parts, metaField(meta, token))
+				}
+				parts = append(parts, filepath.Base(path))
+				dst := filepath.Join(parts...)
+
+				if path != dst {
+					results <- result{mv: move{src: path, dst: dst}, ok: true}
+				} else {
+					results <- result{ok: false}
+				}
+			}
+		}()
+	}
+
+	for _, f := range files {
+		jobs <- f
+	}
+	close(jobs)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	var moves []move
+	for r := range results {
+		if r.ok {
+			moves = append(moves, r.mv)
+		}
+	}
+
+	// Sort for deterministic, reproducible output order.
+	sort.Slice(moves, func(i, j int) bool {
+		return moves[i].src < moves[j].src
+	})
+
+	return moves, nil
 }
 
 // printPlan prints the move plan and summary stats.
