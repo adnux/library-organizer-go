@@ -1,0 +1,11 @@
+# Compiled binaries
+music-organizer
+music-organizer.exe
+organize
+organize.exe
+
+# Environment
+.env
+
+# macOS
+.DS_Store
