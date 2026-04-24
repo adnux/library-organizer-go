@@ -73,6 +73,12 @@ copy .env.example .env
 ./organize -structure "Genre|Year|Artist"
 ./organize -structure "Artist|Year" -execute
 
+# Real-world example: sort Electronic library by Genre → Artist → Year
+./music-organizer -root ~/Music/Electronic -structure "Genre|Artist|Year" -execute
+
+# Full example: organize your music library by genre, then artist, then year
+./music-organizer -root ~/Music/Electronic -structure "Genre|Artist|Year" -execute
+
 # Fix malformed DATE tags (normalize to 4-digit year)
 ./organize -fixYears            # preview
 ./organize -fixYears -execute   # apply
