@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-// ---------------------------------------------------------------------------
-// Genre normalization
-// ---------------------------------------------------------------------------
-
 type genreRule struct {
 	pattern *regexp.Regexp
 	name    string
@@ -36,9 +32,6 @@ var genreRules = []genreRule{
 	{regexp.MustCompile(`(?i)\bpop\b`), "Pop"},
 }
 
-// normalizeGenre picks the most specific known genre from a raw (possibly
-// compound) tag value. Compound tags like "edm;edm:techno:festival:melodic"
-// are split on ; : , before matching.
 func normalizeGenre(raw string) string {
 	if raw == "" {
 		return ""
@@ -72,18 +65,12 @@ func normalizeArtist(raw string) string {
 	return s
 }
 
-// ---------------------------------------------------------------------------
-// ffprobe tag extraction
-// ---------------------------------------------------------------------------
-
 type ffprobeOutput struct {
 	Format struct {
 		Tags map[string]string `json:"tags"`
 	} `json:"format"`
 }
 
-// getTags reads embedded audio tags from filepath via ffprobe.
-// Returns a lowercased key map; empty map on any error.
 func getTags(filepath string) map[string]string {
 	out, err := exec.Command(
 		"ffprobe", "-v", "quiet",
@@ -106,8 +93,6 @@ func getTags(filepath string) map[string]string {
 	return lower
 }
 
-// parseDateTag extracts (year, month) from embedded tags.
-// month is 0 if only a year is found.
 func parseDateTag(tags map[string]string) (year, month int) {
 	dateRe := regexp.MustCompile(`(\d{4})(?:-(\d{2}))?`)
 	for _, key := range []string{"tdor", "trda", "date", "year"} {
@@ -129,10 +114,6 @@ func parseDateTag(tags map[string]string) (year, month int) {
 	return 0, 0
 }
 
-// ---------------------------------------------------------------------------
-// Folder-name heuristics
-// ---------------------------------------------------------------------------
-
 var (
 	monthNames = map[string]int{
 		"january": 1, "february": 2, "march": 3, "april": 4,
@@ -148,7 +129,6 @@ var (
 	reYear         = regexp.MustCompile(`\b(20\d{2}|19\d{2})\b`)
 	reYearBracketed = regexp.MustCompile(`[\[\(](20\d{2}|19\d{2})[\]\)]`)
 
-	// Artist extraction patterns
 	reBracketedYear  = regexp.MustCompile(`^\[\d{4}\]\s*(.+?)\s*-\s*.+`)
 	reArtistDashYear = regexp.MustCompile(`^(.+?)\s*-\s*20\d{2}\s*-\s*.+`)
 	reYearDashArtist = regexp.MustCompile(`^20\d{2}\s*-\s*(.+?)\s*-\s*.+`)
@@ -159,7 +139,6 @@ var (
 	reVA = regexp.MustCompile(`(?i)^(VA|Various)`)
 )
 
-// weekToMonth converts an ISO year+week to the month of that week's Monday.
 func weekToMonth(year, week int) int {
 	// Jan 4 is always in ISO week 1.
 	jan4 := time.Date(year, time.January, 4, 0, 0, 0, 0, time.UTC)
@@ -178,11 +157,9 @@ type folderInfo struct {
 	artist      string
 }
 
-// parseFolderName infers release metadata from a single folder name segment.
 func parseFolderName(name string) folderInfo {
 	info := folderInfo{}
 
-	// ISO week
 	if m := reISOWeek.FindStringSubmatch(name); m != nil {
 		if ym := reYear.FindStringSubmatch(name); ym != nil {
 			y, _ := strconv.Atoi(ym[1])
@@ -192,7 +169,6 @@ func parseFolderName(name string) folderInfo {
 		}
 	}
 
-	// Explicit YYYY-MM
 	if info.month == 0 {
 		if m := reExplicitDate.FindStringSubmatch(name); m != nil {
 			info.year, _ = strconv.Atoi(m[1])
@@ -200,7 +176,6 @@ func parseFolderName(name string) folderInfo {
 		}
 	}
 
-	// Month name
 	if info.month == 0 {
 		lower := strings.ToLower(name)
 		// Try longest names first to avoid "mar" matching "march"
@@ -219,7 +194,6 @@ func parseFolderName(name string) folderInfo {
 		}
 	}
 
-	// Year only
 	if info.year == 0 {
 		if m := reYearBracketed.FindStringSubmatch(name); m != nil {
 			info.year, _ = strconv.Atoi(m[1])
@@ -228,7 +202,6 @@ func parseFolderName(name string) folderInfo {
 		}
 	}
 
-	// Genre
 	for _, rule := range genreRules {
 		if rule.pattern.MatchString(name) {
 			info.genre = rule.name
@@ -236,7 +209,6 @@ func parseFolderName(name string) folderInfo {
 		}
 	}
 
-	// Artist
 	if m := reBracketedYear.FindStringSubmatch(name); m != nil {
 		info.artist = strings.TrimSpace(m[1])
 	}
@@ -258,16 +230,10 @@ func parseFolderName(name string) folderInfo {
 	return info
 }
 
-// ---------------------------------------------------------------------------
-// Metadata resolver
-// ---------------------------------------------------------------------------
-
 type trackMeta struct {
 	year, month, genre, artist string
 }
 
-// resolveMetadata determines the target year/month/genre/artist for a file.
-// It reads embedded tags first, then walks up the folder tree for fallbacks.
 func resolveMetadata(filePath string) trackMeta {
 	tags := getTags(filePath)
 
@@ -275,7 +241,6 @@ func resolveMetadata(filePath string) trackMeta {
 	artist := normalizeArtist(firstOf(tags["album_artist"], tags["artist"]))
 	genre := normalizeGenre(tags["genre"])
 
-	// Walk up folder segments (closest parent first)
 	parts := strings.Split(filePath, "/")
 	for i := len(parts) - 2; i >= 0; i-- {
 		if year != 0 && month != 0 && genre != "" && artist != "Various Artists" {

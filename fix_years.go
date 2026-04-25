@@ -10,20 +10,17 @@ import (
 	"strings"
 )
 
-// yearIssue describes a file whose DATE tag needs fixing.
 type yearIssue struct {
 	path       string
-	currentVal string // raw current tag value (empty = missing)
-	fixedYear  string // 4-digit year to write
-	reason     string // human-readable explanation
+	currentVal string
+	fixedYear  string
+	reason     string
 }
 
 var reFourDigitYear = regexp.MustCompile(`^(19|20)\d{2}$`)
 var reYearPrefix = regexp.MustCompile(`^(19|20)\d{2}`)
 var reFolderYear = regexp.MustCompile(`^(19|20)\d{2}$`)
 
-// fixYears scans root for files with non-standard DATE tags and either
-// prints a report (dry-run) or rewrites the tag via ffmpeg.
 func fixYears(root string, execute bool) error {
 	mode := "DRY-RUN"
 	if execute {
@@ -42,7 +39,6 @@ func fixYears(root string, execute bool) error {
 		return nil
 	}
 
-	// Print plan grouped by reason
 	byReason := map[string][]yearIssue{}
 	for _, iss := range issues {
 		byReason[iss.reason] = append(byReason[iss.reason], iss)
@@ -67,7 +63,6 @@ func fixYears(root string, execute bool) error {
 		return nil
 	}
 
-	// Execute
 	fmt.Println("\n  Rewriting tags...")
 	fixed, skipped, errs := 0, 0, 0
 	for _, iss := range issues {
@@ -86,8 +81,6 @@ func fixYears(root string, execute bool) error {
 	return nil
 }
 
-// scanYearIssues walks root and returns every file whose DATE tag is not
-// already a clean 4-digit year.
 func scanYearIssues(root string) ([]yearIssue, error) {
 	var issues []yearIssue
 
@@ -105,7 +98,6 @@ func scanYearIssues(root string) ([]yearIssue, error) {
 
 		switch {
 		case reFourDigitYear.MatchString(dateVal):
-			// Already correct — skip.
 			return nil
 
 		case reYearPrefix.MatchString(dateVal):
@@ -123,7 +115,7 @@ func scanYearIssues(root string) ([]yearIssue, error) {
 			// tdor/trda tags first, then fall back to folder year.
 			year := recoverYear(path, root, tags)
 			if year == "" {
-				return nil // cannot determine year, skip
+				return nil
 			}
 			reason := "replace garbage/missing with folder year"
 			if tags["tdor"] != "" || tags["trda"] != "" {
@@ -143,8 +135,6 @@ func scanYearIssues(root string) ([]yearIssue, error) {
 	return issues, err
 }
 
-// recoverYear finds the best available year for a file with a bad/missing
-// DATE tag. Priority: tdor → trda → folder path segment.
 func recoverYear(filePath, root string, tags map[string]string) string {
 	for _, key := range []string{"tdor", "trda"} {
 		if val := tags[key]; val != "" && reYearPrefix.MatchString(val) {
@@ -165,8 +155,6 @@ func recoverYear(filePath, root string, tags map[string]string) string {
 	return ""
 }
 
-// rewriteDateTag uses ffmpeg to overwrite the DATE tag in-place.
-// It writes to a temp file then atomically replaces the original.
 func rewriteDateTag(filePath, year string) error {
 	tmp := filePath + ".tmp" + filepath.Ext(filePath)
 

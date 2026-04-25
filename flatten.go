@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-// flatten moves all music files directly into root, removing the folder hierarchy.
 func flatten(root string, execute bool) error {
 	mode := "DRY-RUN"
 	if execute {
@@ -33,7 +32,6 @@ func flatten(root string, execute bool) error {
 			return nil
 		}
 
-		// Skip files already at the root level
 		if filepath.Dir(path) == root {
 			return nil
 		}

@@ -25,8 +25,6 @@ var (
 	defaultStructure = []string{"year", "genre", "artist", "month"}
 )
 
-// parseStructure splits a pipe-separated structure string into lowercase tokens
-// and validates each one.
 func parseStructure(s string) ([]string, error) {
 	parts := strings.Split(s, "|")
 	tokens := make([]string, 0, len(parts))
@@ -46,7 +44,6 @@ func parseStructure(s string) ([]string, error) {
 	return tokens, nil
 }
 
-// metaField returns the trackMeta field value for the given token name.
 func metaField(meta trackMeta, token string) string {
 	switch token {
 	case "year":
@@ -61,14 +58,11 @@ func metaField(meta trackMeta, token string) string {
 	return "Unknown"
 }
 
-// move represents a planned file relocation.
 type move struct {
 	src string
 	dst string
 }
 
-// organize walks root, builds a move plan, then either prints it (dry-run)
-// or executes it.
 func organize(root string, execute bool, structure []string) error {
 	mode := "DRY-RUN"
 	if execute {
@@ -98,8 +92,6 @@ func organize(root string, execute bool, structure []string) error {
 	return executePlan(moves, root)
 }
 
-// collectMusicFiles walks root and returns all music file paths, without
-// reading any metadata. This is the fast first phase of the two-phase plan.
 func collectMusicFiles(root string) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -117,10 +109,7 @@ func collectMusicFiles(root string) ([]string, error) {
 	return files, err
 }
 
-// buildPlan collects all music files, then resolves metadata for each one
-// using workerCount goroutines in parallel (the slow ffprobe calls).
 func buildPlan(root string, structure []string) ([]move, error) {
-	// Phase 1 — fast filesystem walk, no ffprobe yet.
 	files, err := collectMusicFiles(root)
 	if err != nil {
 		return nil, fmt.Errorf("collecting files: %w", err)
@@ -128,7 +117,6 @@ func buildPlan(root string, structure []string) ([]move, error) {
 	fmt.Printf("  Found %d music files. Resolving metadata with %d workers...\n\n",
 		len(files), workerCount)
 
-	// Phase 2 — parallel metadata resolution.
 	type result struct {
 		mv move
 		ok bool
@@ -179,7 +167,6 @@ func buildPlan(root string, structure []string) ([]move, error) {
 		}
 	}
 
-	// Sort for deterministic, reproducible output order.
 	sort.Slice(moves, func(i, j int) bool {
 		return moves[i].src < moves[j].src
 	})
@@ -187,7 +174,6 @@ func buildPlan(root string, structure []string) ([]move, error) {
 	return moves, nil
 }
 
-// printPlan prints the move plan and summary stats.
 func printPlan(moves []move, root string, structure []string, execute bool) {
 	verb := "WOULD MOVE"
 	if execute {
@@ -203,7 +189,6 @@ func printPlan(moves []move, root string, structure []string, execute bool) {
 	fmt.Printf("\n%s\n", strings.Repeat("─", 80))
 	fmt.Printf("  Total files to move: %d\n", len(moves))
 
-	// Dynamic stats per structure level
 	for i, token := range structure {
 		counts := map[string]int{}
 		for _, m := range moves {
@@ -217,7 +202,6 @@ func printPlan(moves []move, root string, structure []string, execute bool) {
 	}
 }
 
-// executePlan moves files and cleans up empty source directories.
 func executePlan(moves []move, root string) error {
 	fmt.Println("\n  Moving files...")
 	moved, skipped := 0, 0
@@ -252,11 +236,9 @@ func executePlan(moves []move, root string) error {
 	return nil
 }
 
-// removeEmptyDirs removes empty directories inside root.
 func removeEmptyDirs(root string) int {
 	removed := 0
 
-	// Collect dirs bottom-up
 	var dirs []string
 	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err == nil && d.IsDir() && path != root {
@@ -265,7 +247,6 @@ func removeEmptyDirs(root string) int {
 		return nil
 	})
 
-	// Process deepest first
 	sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
 
 	for _, dir := range dirs {
@@ -278,10 +259,6 @@ func removeEmptyDirs(root string) int {
 
 	return removed
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 func copyFile(src, dst string) error {
 	data, err := os.ReadFile(src)

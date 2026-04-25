@@ -9,9 +9,6 @@ import (
 	"strings"
 )
 
-// loadEnvRoot reads MUSIC_ROOT from a .env file.
-// It looks in the directory of the running binary first, then CWD.
-// Returns the current working directory if no value is found.
 func loadEnvRoot() string {
 	exe, _ := os.Executable()
 	candidates := []string{
