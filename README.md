@@ -7,9 +7,35 @@ A compiled CLI tool that reorganizes a music folder into a configurable hierarch
 - Go 1.22+ (to build from source)
 - `ffprobe` + `ffmpeg` — used to read/write embedded audio tags
 
+### Install Go
+
+**macOS**
+```bash
+brew install go
+```
+
+**Linux (Debian / Ubuntu)**
+```bash
+sudo apt update && sudo apt install -y golang-go
+# or download from: https://go.dev/dl/
+```
+
+**Windows**
+```powershell
+winget install GoLang.Go
+# or download from: https://go.dev/dl/
+```
+
+### Install ffmpeg (includes ffprobe)
+
 **macOS**
 ```bash
 brew install ffmpeg
+```
+
+**Linux (Debian / Ubuntu)**
+```bash
+sudo apt update && sudo apt install -y ffmpeg
 ```
 
 **Windows**
