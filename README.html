@@ -333,6 +333,10 @@ go build -o organize.exe .</pre>
 ./organize <span class="flag">-structure</span> "Genre|Year|Artist"
 ./organize <span class="flag">-structure</span> "Artist|Year" <span class="flag">-execute</span>
 
+<span class="comment"># Only reorganize files directly in root (skip subfolders)</span>
+./organize <span class="flag">-only-root</span>
+./organize <span class="flag">-only-root</span> <span class="flag">-execute</span>
+
 <span class="comment"># Real-world example: sort Electronic library by Genre → Artist → Year</span>
 ./music-organizer <span class="flag">-root</span> <span class="path">~/Music/Electronic</span> <span class="flag">-structure</span> "Genre|Artist|Year" <span class="flag">-execute</span>
 
@@ -362,6 +366,10 @@ go build -o organize.exe .</pre>
 <span class="comment"># Custom root folder</span>
 .\organize.exe <span class="flag">-root</span> <span class="path">"D:\Music\Electronic"</span> <span class="flag">-execute</span>
 
+<span class="comment"># Only reorganize files in root (skip subfolders)</span>
+.\organize.exe <span class="flag">-only-root</span>
+.\organize.exe <span class="flag">-only-root</span> <span class="flag">-execute</span>
+
 <span class="comment"># Custom folder structure</span>
 .\organize.exe <span class="flag">-structure</span> "Genre|Year|Artist"
 
@@ -388,6 +396,7 @@ go build -o organize.exe .</pre>
           <tr><td><code>-root PATH</code></td><td><code>.env</code> <code>MUSIC_ROOT</code> or CWD</td><td>Root folder to operate on</td></tr>
           <tr><td><code>-execute</code></td><td>dry-run</td><td>Apply changes (without this flag nothing is written)</td></tr>
           <tr><td><code>-structure TOKENS</code></td><td><code>Year|Genre|Artist|Month</code></td><td>Pipe-separated folder hierarchy</td></tr>
+          <tr><td><code>-only-root</code></td><td>—</td><td>Only process files directly in root; skip subdirectories</td></tr>
           <tr><td><code>-fixYears</code></td><td>—</td><td>Normalize DATE tags to 4-digit year instead of reorganizing</td></tr>
           <tr><td><code>-flatten</code></td><td>—</td><td>Move all music files to root, removing all subfolders</td></tr>
         </tbody>

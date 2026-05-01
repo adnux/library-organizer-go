@@ -63,7 +63,7 @@ type move struct {
 	dst string
 }
 
-func organize(root string, execute bool, structure []string) error {
+func organize(root string, execute bool, structure []string, onlyRoot bool) error {
 	mode := "DRY-RUN"
 	if execute {
 		mode = "EXECUTE"
@@ -77,7 +77,7 @@ func organize(root string, execute bool, structure []string) error {
 		strings.Join(structureStr, " / "),
 		strings.Repeat("=", 80))
 
-	moves, err := buildPlan(root, structure)
+	moves, err := buildPlan(root, structure, onlyRoot)
 	if err != nil {
 		return fmt.Errorf("building plan: %w", err)
 	}
@@ -92,7 +92,24 @@ func organize(root string, execute bool, structure []string) error {
 	return executePlan(moves, root)
 }
 
-func collectMusicFiles(root string) ([]string, error) {
+func collectMusicFiles(root string, onlyRoot bool) ([]string, error) {
+	if onlyRoot {
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			return nil, err
+		}
+		var files []string
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			if musicExts[strings.ToLower(filepath.Ext(e.Name()))] {
+				files = append(files, filepath.Join(root, e.Name()))
+			}
+		}
+		return files, nil
+	}
+
 	var files []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -109,8 +126,8 @@ func collectMusicFiles(root string) ([]string, error) {
 	return files, err
 }
 
-func buildPlan(root string, structure []string) ([]move, error) {
-	files, err := collectMusicFiles(root)
+func buildPlan(root string, structure []string, onlyRoot bool) ([]move, error) {
+	files, err := collectMusicFiles(root, onlyRoot)
 	if err != nil {
 		return nil, fmt.Errorf("collecting files: %w", err)
 	}

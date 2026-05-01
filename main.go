@@ -55,11 +55,12 @@ func main() {
 	defaultRoot := loadEnvRoot()
 	defaultStructureStr := strings.Join(defaultStructure, "|")
 
-	root         := flag.String("root", defaultRoot, "")
-	execute      := flag.Bool("execute", false, "")
-	fixYearsFlag := flag.Bool("fixYears", false, "")
-	flattenFlag  := flag.Bool("flatten", false, "")
+	root          := flag.String("root", defaultRoot, "")
+	execute       := flag.Bool("execute", false, "")
+	fixYearsFlag  := flag.Bool("fixYears", false, "")
+	flattenFlag   := flag.Bool("flatten", false, "")
 	structureFlag := flag.String("structure", defaultStructureStr, "")
+	onlyRoot      := flag.Bool("only-root", false, "")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `organize — Reorganize a music folder into a configurable folder structure.
@@ -81,6 +82,11 @@ FLAGS
         Pipe-separated folder hierarchy (case-insensitive tokens).
         Default: Year|Genre|Artist|Month
         Valid tokens: Year, Month, Genre, Artist
+
+  -only-root
+        Only reorganize files directly in <root> — subfolders are not
+        touched. Without this flag all files in all subfolders are
+        processed (default behaviour).
 
   -fixYears
         Scan all files and rewrite malformed DATE tags (e.g. full dates
@@ -112,6 +118,12 @@ EXAMPLES
 
   organize -execute
       Move files for real.
+
+  organize -only-root
+      Dry-run, but only files directly in <root> (skip subfolders).
+
+  organize -only-root -execute
+      Move only root-level files for real.
 
   organize -structure "Genre|Year|Artist" -execute
       Reorganize as  <root>/Melodic House & Techno/2025/Massano/track.flac
@@ -180,7 +192,7 @@ CONVENTIONS
 		os.Exit(1)
 	}
 
-	if err := organize(rootPath, *execute, structure); err != nil {
+	if err := organize(rootPath, *execute, structure, *onlyRoot); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}

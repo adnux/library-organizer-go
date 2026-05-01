@@ -99,6 +99,10 @@ copy .env.example .env
 ./organize -structure "Genre|Year|Artist"
 ./organize -structure "Artist|Year" -execute
 
+# Only reorganize files directly in root (skip subfolders)
+./organize -only-root
+./organize -only-root -execute
+
 # Real-world example: sort Electronic library by Genre → Artist → Year
 ./music-organizer -root ~/Music/Electronic -structure "Genre|Artist|Year" -execute
 
@@ -125,6 +129,10 @@ copy .env.example .env
 # Custom root folder
 .\organize.exe -root "D:\Music\Electronic" -execute
 
+# Only reorganize files in root (skip subfolders)
+.\organize.exe -only-root
+.\organize.exe -only-root -execute
+
 # Custom folder structure
 .\organize.exe -structure "Genre|Year|Artist"
 
@@ -144,6 +152,7 @@ copy .env.example .env
 | `-root PATH` | `.env` `MUSIC_ROOT` or CWD | Root folder to operate on |
 | `-execute` | dry-run | Apply changes (without this flag nothing is written) |
 | `-structure TOKENS` | `Year\|Genre\|Artist\|Month` | Pipe-separated folder hierarchy |
+| `-only-root` | — | Only process files directly in root; skip subdirectories |
 | `-fixYears` | — | Normalize DATE tags to 4-digit year instead of reorganizing |
 | `-flatten` | — | Move all music files to root, removing all subfolders |
 
